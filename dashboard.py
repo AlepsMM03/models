@@ -13,6 +13,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import numpy as np
 
 # =================== CONFIGURACIÓN ===================
 st.set_page_config(
@@ -230,6 +231,212 @@ if not valid_rows.empty:
     st.plotly_chart(fig_global, use_container_width=True)
 else:
     st.info("No hay curvas suficientes para calcular promedios globales.")
+
+# =================== VISUALIZACIONES 3D DISRUPTIVAS ===================
+st.markdown("---")
+st.subheader("Visualizaciones 3D Disruptivas")
+
+# --- 1. Nube 3D de rendimiento por combinación ---
+st.markdown("**Nube 3D de rendimiento (Accuracy, F1, Runtime)**")
+
+fig_3d_perf = px.scatter_3d(
+    filtered,
+    x="test_acc",
+    y="test_f1",
+    z="runtime",
+    color="optimizer",
+    size="pca_components",
+    symbol="activation",
+    hover_name="arch",
+    title="Espacio de rendimiento de modelos (3D)",
+    color_discrete_sequence=px.colors.qualitative.Vivid
+)
+fig_3d_perf.update_layout(
+    template="plotly_dark",
+    scene=dict(
+        xaxis_title="Accuracy",
+        yaxis_title="F1-score",
+        zaxis_title="Tiempo de ejecución (s)",
+        bgcolor="#0E1117",
+    ),
+    margin=dict(l=0, r=0, b=0, t=40)
+)
+st.plotly_chart(fig_3d_perf, use_container_width=True)
+
+
+# ==========================================
+# DESCENSO DE GRADIENTE (Evolución del Entrenamiento) — INTERACTIVO
+# ==========================================
+import plotly.graph_objects as go
+
+st.markdown("---")
+st.subheader("📉 Descenso de Gradiente (Evolución del Entrenamiento)")
+
+# Seleccionar el experimento
+combo_exp = st.selectbox(
+    "Selecciona el experimento para visualizar el descenso de gradiente:",
+    filtered["combo"],
+    key="descenso_gradiente"
+)
+
+# Obtener los datos del experimento seleccionado
+exp_data = filtered.loc[filtered["combo"] == combo_exp].iloc[0]
+train_losses = exp_data["train_loss"]
+val_f1 = exp_data["val_f1"]
+
+if isinstance(train_losses, list) and len(train_losses) > 0:
+    epochs = list(range(1, len(train_losses) + 1))
+
+    # Figura interactiva
+    fig = go.Figure()
+
+    # Curva de pérdida (Loss)
+    fig.add_trace(go.Scatter(
+        x=epochs, y=train_losses,
+        mode='lines+markers',
+        name='Pérdida (Entrenamiento)',
+        line=dict(color='#4A90E2', width=3),
+        marker=dict(size=6, color='#4A90E2', symbol='circle')
+    ))
+
+    # Curva de F1 (Validación)
+    if isinstance(val_f1, list) and len(val_f1) > 0:
+        val_f1_scaled = [f * max(train_losses) for f in val_f1]  # Escalar F1 visualmente
+        fig.add_trace(go.Scatter(
+            x=epochs, y=val_f1_scaled,
+            mode='lines+markers',
+            name='F1 Validación (Escalada)',
+            line=dict(color='#7ED321', width=2, dash='dash'),
+            marker=dict(size=6, color='#7ED321', symbol='diamond')
+        ))
+
+    # Personalización visual avanzada
+    fig.update_layout(
+        title=f"Descenso de Gradiente — {exp_data['optimizer']} | {exp_data['activation']} | {exp_data['arch']}",
+        xaxis_title="Épocas",
+        yaxis_title="Magnitud",
+        template="plotly_dark",
+        hovermode="x unified",
+        font=dict(size=13),
+        height=500,
+        plot_bgcolor="#0E1117",
+        paper_bgcolor="#0E1117",
+        legend=dict(
+            x=0.02, y=0.98,
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="rgba(255,255,255,0.2)"
+        ),
+        margin=dict(l=40, r=40, b=40, t=60)
+    )
+
+    # Animación interactiva opcional (puntos que avanzan por época)
+    frames = [go.Frame(data=[
+        go.Scatter(
+            x=epochs[:k],
+            y=train_losses[:k],
+            mode="lines+markers",
+            line=dict(color='#4A90E2', width=3),
+            marker=dict(size=6, color='#4A90E2')
+        ),
+        go.Scatter(
+            x=epochs[:k],
+            y=val_f1_scaled[:k] if len(val_f1) == len(epochs) else [],
+            mode="lines+markers",
+            line=dict(color='#7ED321', width=2, dash='dash'),
+            marker=dict(size=6, color='#7ED321')
+        )
+    ], name=str(k)) for k in range(1, len(epochs)+1)]
+
+    fig.update(frames=frames)
+    fig.update_layout(
+        updatemenus=[{
+            "buttons": [
+                {"args": [None, {"frame": {"duration": 80, "redraw": True}, "fromcurrent": True}],
+                 "label": "▶️ Reproducir", "method": "animate"},
+                {"args": [[None], {"frame": {"duration": 0}, "mode": "immediate", "transition": {"duration": 0}}],
+                 "label": "⏸️ Pausar", "method": "animate"}
+            ],
+            "direction": "left",
+            "pad": {"r": 10, "t": 40},
+            "showactive": True,
+            "type": "buttons",
+            "x": 0.1,
+            "xanchor": "right",
+            "y": 1.2,
+            "yanchor": "top"
+        }]
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+else:
+    st.warning("No hay datos suficientes de entrenamiento para graficar el descenso de gradiente.")
+
+
+# ==========================================
+# DESCENSO DE GRADIENTE 3D INTERACTIVO
+# ==========================================
+st.markdown("---")
+st.subheader("🌌 Visualización 3D del Descenso de Gradiente")
+
+# Selección de combinación
+combo_sel = st.selectbox("Selecciona el experimento para visualizar:", filtered["combo"])
+
+exp_row = filtered.loc[filtered["combo"] == combo_sel].iloc[0]
+
+train_loss = exp_row["train_loss"]
+val_f1 = exp_row["val_f1"]
+
+if len(train_loss) > 1 and len(val_f1) > 1:
+    epochs = list(range(1, len(train_loss) + 1))
+
+    # Crear la superficie 3D interpolada del descenso de gradiente
+    X, Y = np.meshgrid(epochs, np.linspace(0, 1, len(epochs)))
+    Z = np.array(train_loss)
+    Z = np.tile(Z, (len(epochs), 1))
+
+    fig_sdg = go.Figure()
+
+    # Superficie suave del descenso de pérdida
+    fig_sdg.add_trace(go.Surface(
+        z=Z, x=X, y=Y,
+        colorscale="Viridis",
+        opacity=0.8,
+        name="Superficie de pérdida",
+        showscale=True
+    ))
+
+    # Línea del F1 sobre la superficie (trayectoria de validación)
+    fig_sdg.add_trace(go.Scatter3d(
+        x=epochs,
+        y=[0.5]*len(val_f1),
+        z=val_f1,
+        mode="lines+markers",
+        line=dict(color="cyan", width=5),
+        marker=dict(size=4, color="white"),
+        name="F1 (Validación)"
+    ))
+
+    fig_sdg.update_layout(
+        title=f"Descenso de Gradiente 3D — {exp_row['optimizer']} | {exp_row['activation']} | {exp_row['arch']}",
+        scene=dict(
+            xaxis_title="Épocas",
+            yaxis_title="Eje auxiliar",
+            zaxis_title="Valor",
+            bgcolor="#0E1117",
+            xaxis=dict(gridcolor="#222", showbackground=True, backgroundcolor="#111"),
+            yaxis=dict(gridcolor="#222", showbackground=True, backgroundcolor="#111"),
+            zaxis=dict(gridcolor="#222", showbackground=True, backgroundcolor="#111"),
+        ),
+        template="plotly_dark",
+        height=700,
+        margin=dict(l=0, r=0, b=0, t=50)
+    )
+
+    st.plotly_chart(fig_sdg, use_container_width=True)
+else:
+    st.warning("Este experimento no tiene suficientes datos para graficar el descenso de gradiente 3D.")
+
 
 # =================== INTERPRETACIÓN FINAL ===================
 st.markdown("---")

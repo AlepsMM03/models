@@ -8,7 +8,6 @@ Ejecución:
 
 import os
 import json
-import requests
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -33,42 +32,48 @@ h1, h2, h3, h4, h5, h6 { color: #E0E0E0; font-family: 'Inter', sans-serif; }
 
 
 # =================== FUNCIÓN DE CARGA ===================
-TOKEN = "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"  # ⚠️
-
-def load_results_github(repo_owner="AlepsMM03", repo_name="models"):
-    url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents"
-    headers = {"Authorization": f"token {TOKEN}"}
-
+def load_results_local(folder_path="results"):
+    """
+    Carga los resultados desde archivos JSON en una carpeta local
+    """
     try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        files = response.json()
-
-        json_files = [f for f in files if f["name"].endswith(".json")]
-        if not json_files:
-            st.warning("No se encontraron archivos JSON en la raíz del repositorio.")
+        # Verificar si la carpeta existe
+        if not os.path.exists(folder_path):
+            st.warning(f"La carpeta '{folder_path}' no existe. Creándola...")
+            os.makedirs(folder_path)
             return pd.DataFrame()
-
+        
+        # Obtener todos los archivos JSON en la carpeta
+        json_files = [f for f in os.listdir(folder_path) if f.endswith('.json')]
+        
+        if not json_files:
+            st.warning(f"No se encontraron archivos JSON en la carpeta '{folder_path}'.")
+            return pd.DataFrame()
+        
         data = []
-        for file in json_files:
-            raw_url = file["download_url"]
+        for file_name in json_files:
+            file_path = os.path.join(folder_path, file_name)
             try:
-                res = requests.get(raw_url, headers=headers)
-                res.raise_for_status()
-                j = json.loads(res.text)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    j = json.load(f)
+                
+                # Procesar los datos como antes
                 if isinstance(j.get("arch"), list):
                     j["arch"] = str(j["arch"])
                 for key in ["train_loss", "val_f1"]:
                     if key not in j or not isinstance(j[key], list):
                         j[key] = []
+                
                 data.append(j)
+                
             except Exception as e:
-                st.error(f"Error leyendo {file['name']}: {e}")
-
+                st.error(f"Error leyendo {file_name}: {e}")
+        
+        st.success(f"Se cargaron {len(data)} archivos JSON desde '{folder_path}'")
         return pd.DataFrame(data)
-
+        
     except Exception as e:
-        st.error(f"Error al acceder al repositorio: {e}")
+        st.error(f"Error al acceder a la carpeta local: {e}")
         return pd.DataFrame()
 
 
@@ -76,7 +81,15 @@ def load_results_github(repo_owner="AlepsMM03", repo_name="models"):
 st.title("Comparación de Optimizadores, Activaciones y Arquitecturas en una MLP (con PCA)")
 st.caption("Visualización interactiva basada en los experimentos realizados sobre el dataset de estados mentales.")
 
-df = load_results_github()
+# Input para la ruta de la carpeta
+default_folder = "results"  # Puedes cambiar esta ruta por defecto
+folder_path = st.text_input("Ruta de la carpeta con los archivos JSON:", value=default_folder)
+
+if folder_path:
+    df = load_results_local(folder_path)
+else:
+    df = pd.DataFrame()
+
 if df.empty:
     st.stop()
 
@@ -426,9 +439,3 @@ st.info(
     f"y arquitectura {best['arch']}, alcanzando un F1 = {best['test_f1']:.3f} "
     f"y Accuracy = {best['test_acc']:.3f}."
 )
-
-
-
-
-
-

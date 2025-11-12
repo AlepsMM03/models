@@ -2,8 +2,7 @@
 Dashboard avanzado para comparar optimizadores, activaciones y arquitecturas
 de una MLP entrenada con PCA.
 
-Ejecución:
-    streamlit run dashboard.py
+AlexMM
 """
 
 import os
@@ -81,14 +80,8 @@ def load_results_local(folder_path="results"):
 st.title("Comparación de Optimizadores, Activaciones y Arquitecturas en una MLP (con PCA)")
 st.caption("Visualización interactiva basada en los experimentos realizados sobre el dataset de estados mentales.")
 
-# Input para la ruta de la carpeta
-default_folder = "results"  # Puedes cambiar esta ruta por defecto
-folder_path = st.text_input("Ruta de la carpeta con los archivos JSON:", value=default_folder)
-
-if folder_path:
-    df = load_results_local(folder_path)
-else:
-    df = pd.DataFrame()
+# Carga directa desde la carpeta 'results'
+df = load_results_local("results")
 
 if df.empty:
     st.stop()

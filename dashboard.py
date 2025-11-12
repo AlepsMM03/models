@@ -33,13 +33,14 @@ h1, h2, h3, h4, h5, h6 { color: #E0E0E0; font-family: 'Inter', sans-serif; }
 
 
 # =================== FUNCIÓN DE CARGA ===================
+TOKEN = "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"  # ⚠️
+
 def load_results_github(repo_owner="AlepsMM03", repo_name="models"):
-    """
-    Carga automáticamente todos los archivos JSON de la raíz de un repositorio público de GitHub.
-    """
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents"
+    headers = {"Authorization": f"token {TOKEN}"}
+
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         files = response.json()
 
@@ -52,12 +53,11 @@ def load_results_github(repo_owner="AlepsMM03", repo_name="models"):
         for file in json_files:
             raw_url = file["download_url"]
             try:
-                res = requests.get(raw_url)
+                res = requests.get(raw_url, headers=headers)
                 res.raise_for_status()
                 j = json.loads(res.text)
                 if isinstance(j.get("arch"), list):
                     j["arch"] = str(j["arch"])
-                # Asegurar campos faltantes
                 for key in ["train_loss", "val_f1"]:
                     if key not in j or not isinstance(j[key], list):
                         j[key] = []
@@ -426,5 +426,6 @@ st.info(
     f"y arquitectura {best['arch']}, alcanzando un F1 = {best['test_f1']:.3f} "
     f"y Accuracy = {best['test_acc']:.3f}."
 )
+
 
 

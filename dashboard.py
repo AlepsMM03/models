@@ -209,32 +209,10 @@ if row["train_loss"] and row["val_f1"]:
 else:
     st.warning("No se encontraron curvas de entrenamiento para esta combinación.")
 
-# =================== PROMEDIOS GLOBALES ===================
+
+# =================== VISUALIZACIONES 3D ===================
 st.markdown("---")
-st.subheader("Pérdida y F1 Promedio Global")
-
-valid_rows = filtered[filtered["train_loss"].apply(lambda x: len(x) > 0)]
-if not valid_rows.empty:
-    avg_loss = valid_rows["train_loss"].apply(lambda x: pd.Series(x)).mean(axis=0)
-    avg_f1 = valid_rows["val_f1"].apply(lambda x: pd.Series(x)).mean(axis=0)
-    epochs = list(range(1, len(avg_loss) + 1))
-
-    fig_global = go.Figure()
-    fig_global.add_trace(go.Scatter(x=epochs, y=avg_loss, mode="lines+markers", name="Pérdida (Promedio)"))
-    fig_global.add_trace(go.Scatter(x=epochs, y=avg_f1, mode="lines+markers", name="F1 (Promedio)"))
-    fig_global.update_layout(
-        title="Evolución promedio global de entrenamiento",
-        template="plotly_dark",
-        plot_bgcolor="#0E1117",
-        paper_bgcolor="#0E1117"
-    )
-    st.plotly_chart(fig_global, use_container_width=True)
-else:
-    st.info("No hay curvas suficientes para calcular promedios globales.")
-
-# =================== VISUALIZACIONES 3D DISRUPTIVAS ===================
-st.markdown("---")
-st.subheader("Visualizaciones 3D Disruptivas")
+st.subheader("Visualizaciones 3D")
 
 # --- 1. Nube 3D de rendimiento por combinación ---
 st.markdown("**Nube 3D de rendimiento (Accuracy, F1, Runtime)**")
@@ -448,3 +426,4 @@ st.info(
     f"y arquitectura {best['arch']}, alcanzando un F1 = {best['test_f1']:.3f} "
     f"y Accuracy = {best['test_acc']:.3f}."
 )
+

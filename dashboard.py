@@ -33,7 +33,7 @@ h1, h2, h3, h4, h5, h6 { color: #E0E0E0; font-family: 'Inter', sans-serif; }
 
 
 # =================== FUNCIÓN DE CARGA ===================
-TOKEN = "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"  # ⚠️
+TOKEN = ""  # ⚠️
 
 def load_results_github(repo_owner="AlepsMM03", repo_name="models"):
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents"
@@ -426,6 +426,7 @@ st.info(
     f"y arquitectura {best['arch']}, alcanzando un F1 = {best['test_f1']:.3f} "
     f"y Accuracy = {best['test_acc']:.3f}."
 )
+
 
 
 
